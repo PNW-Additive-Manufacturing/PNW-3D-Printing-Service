@@ -28,6 +28,24 @@ Insert any changes related to configuring the application's environment variable
 
  -->
 
+## September-10-2026
+
+Replaced the FarmAPI slicing call used by the model-analysis CRON with the orca-slicer-api container. Slicing is now submitted as an async job and polled until it finishes, so long slices no longer block or get re-submitted on the next tick.
+
+### Release Highlights
+
+- Model analysis now slices through orca-slicer-api instead of the FarmAPI `slice/info` endpoint.
+- Slice jobs are submitted to `/slice-async` and polled, with a 5 minute timeout and cleanup of finished jobs.
+- Added a run-overlap guard so a slice still in progress is not restarted by the next scheduled tick.
+
+### Environment Changes
+
+The CRON service now requires `SLICER_API_URL`, the URL of the orca-slicer-api container. The service will not start without it. Note that this must be reachable from inside the CRON container, so `localhost` is only correct when running outside of Docker.
+
+`SLICER_PRINTER`, `SLICER_FILAMENT`, and `SLICER_PRESET` are optional and set the baseline profile used to compare all models. They default to `Bambu Lab X1 Carbon 0.4 nozzle`, `Bambu PLA Basic @BBL X1C`, and `0.20mm Standard @BBL X1C`, and must match profiles available in the orca-slicer-api instance.
+
+`FARM_API_URL` is no longer read by the CRON service and can be dropped from its environment. It is still required by Web for printer control, so leave it in place there.
+
 ## April-09-2026
 
 Overhauled the order request UI with a new 3-stage workflow (Upload → Parts → Finalize), where the manufacturing method is now chosen per-part instead of once per order. Introduced first-class `Material` and `ManufacturingMethod` tables so filament metadata (descriptions, icons, benefits/cons) is stored in the database rather than hardcoded. Replaced the old flat filament admin table with a three-column cascading manager and added an archive workflow so legacy filaments referenced by existing parts can be hidden from new orders without breaking history. Decoupled part status progression (printing, printed) from payment status.
